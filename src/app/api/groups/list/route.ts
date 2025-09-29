@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
       type,
       pageNum = "1",
       pageSize = "10",
-      isHot,
     } = Object.fromEntries(searchParams.entries());
 
     // 调用服务获取产品列表
@@ -24,7 +23,6 @@ export async function GET(request: NextRequest) {
       type,
       pageNum: Number(pageNum),
       pageSize: Number(pageSize),
-      isHot: isHot === "true",
     });
 
     // 返回成功响应

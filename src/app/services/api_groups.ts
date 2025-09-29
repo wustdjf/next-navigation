@@ -7,7 +7,6 @@ export interface GroupsQuery {
   pageSize?: number;
   name?: string;
   type?: string;
-  isHot?: boolean;
 }
 
 // 分组数据接口
@@ -29,8 +28,6 @@ export async function getGroups(query: GroupsQuery = {}) {
     if (query.pageSize) params.append("pageSize", query.pageSize.toString());
     if (query.name) params.append("name", query.name);
     if (query.type) params.append("type", query.type);
-    if (query.isHot !== undefined)
-      params.append("isHot", query.isHot.toString());
 
     // 发送请求
     const response = await axios.get(`/api/groups/list?${params.toString()}`);

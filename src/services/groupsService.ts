@@ -10,7 +10,6 @@ export interface GroupFilter {
   pageSize?: number;
   name?: string;
   type?: string;
-  isHot?: boolean;
 }
 
 class GroupsService {
@@ -48,7 +47,7 @@ class GroupsService {
     try {
       const groupRepository = await this.getRepository();
 
-      const { pageNum = 1, pageSize = 10, name, type, isHot } = filter;
+      const { pageNum = 1, pageSize = 10, name, type } = filter;
 
       // 构建查询条件
       const where: any = {};
@@ -57,9 +56,6 @@ class GroupsService {
       }
       if (type) {
         where.type = type;
-      }
-      if (isHot !== undefined) {
-        where.hot = isHot;
       }
 
       // 执行查询，获取分页数据

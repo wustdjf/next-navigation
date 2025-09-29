@@ -34,6 +34,23 @@ class UserService {
     }
   }
 
+  // 获取全部分组列表
+  async findAllUsers(): Promise<User[]> {
+    try {
+      const userRepository = await this.getRepository();
+
+      const qb = await userRepository
+        .createQueryBuilder("user")
+        .orderBy("user.updated_at", "DESC");
+
+      const list = await qb.getMany();
+      return list;
+    } catch (error) {
+      console.error(`获取全部用户失败:`, error);
+      throw error;
+    }
+  }
+
   // 根据账号查找用户
   async findUserById(id: string): Promise<User | null> {
     try {
