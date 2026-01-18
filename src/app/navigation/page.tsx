@@ -902,7 +902,7 @@ function App() {
           )}
 
           {/* GitHub角标 - 在移动端调整位置 */}
-          <GitHubPager url="https://github.com/zqq-nuli/Navihive" />
+          <GitHubPager url="https://github.com/wustdjf/next-navigation" />
         </Container>
       </Box>
       {dialogNode}
