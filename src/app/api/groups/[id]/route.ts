@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { successResponse, errorResponse, ErrorCode } from "@/utils/apiResponse";
+import { ensureInitialized } from "@/utils/databaseUtils";
 import groupsService from "@/services/groupsService";
 
 /**
@@ -11,6 +12,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // 确保数据库已初始化
+    await ensureInitialized();
+
     const id = parseInt(params.id);
 
     if (isNaN(id)) {
@@ -55,6 +59,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // 确保数据库已初始化
+    await ensureInitialized();
+
     const id = parseInt(params.id);
 
     if (isNaN(id)) {
@@ -103,6 +110,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // 确保数据库已初始化
+    await ensureInitialized();
+
     const id = parseInt(params.id);
 
     if (isNaN(id)) {

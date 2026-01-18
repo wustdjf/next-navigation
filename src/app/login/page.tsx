@@ -1,21 +1,23 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Alert,
   CssBaseline,
   ThemeProvider,
-  CircularProgress,
   Container,
   Stack,
 } from "@mui/material";
 import LoginForm from "@/components/LoginForm";
 import { useSnackbar } from "@/hooks/useSnackbar";
-import { createUser } from "@/app/services/api_user";
 import { useTheme } from "@/hooks/useTheme";
+import api from "@/app/services/api";
 import "./page.css";
 
 export default function Login() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { openSnackbar, closeSnackbar, snackbarNode } = useSnackbar({
     autoHideDuration: 6000,
     anchorOrigin: { vertical: "top", horizontal: "center" },
@@ -24,15 +26,23 @@ export default function Login() {
 
   const { theme, themeNode } = useTheme();
 
-  // 新增认证状态
-  const [isAuthChecking, setIsAuthChecking] = useState(false);
-  const [isAuthRequired, setIsAuthRequired] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [initialMode, setInitialMode] = useState<"login" | "register">("login");
+
+  // 检查URL参数，确定初始模式
+  useEffect(() => {
+    const type = searchParams.get("type");
+    if (type === "register") {
+      setInitialMode("register");
+    } else {
+      setInitialMode("login");
+    }
+  }, [searchParams]);
 
   // 处理错误的函数
   const handleError = (errorMessage: string) => {
+    setLoginError(errorMessage);
     openSnackbar({
       children: (
         <Alert
@@ -47,6 +57,32 @@ export default function Login() {
     });
   };
 
+  // 处理成功的函数
+  const handleSuccess = (message: string) => {
+    openSnackbar({
+      children: (
+        <Alert
+          onClose={() => closeSnackbar()}
+          severity="success"
+          variant="filled"
+          sx={{
+            width: "100%",
+            backgroundColor: (theme) =>
+              theme.palette.mode === "dark" ? "#2e7d32" : undefined,
+            color: (theme) =>
+              theme.palette.mode === "dark" ? "#fff" : undefined,
+            "& .MuiAlert-icon": {
+              color: (theme) =>
+                theme.palette.mode === "dark" ? "#fff" : undefined,
+            },
+          }}
+        >
+          {message}
+        </Alert>
+      ),
+    });
+  };
+
   // 登录功能
   const handleLogin = async (username: string, password: string) => {
     try {
@@ -54,47 +90,83 @@ export default function Login() {
       setLoginError(null);
 
       // 调用登录接口
-      const res = await createUser({ username, password });
+      const result = await api.login(username, password);
 
-      if (res && res.code === 0) {
+      if (result && result.user && result.token) {
         // 登录成功
-        setIsAuthenticated(true);
-        setIsAuthRequired(false);
-        localStorage.setItem("access_token", res.data.token);
-        // 加载数据
-        // await fetchData();
-        // await fetchConfigs();
+        handleSuccess("登录成功，正在跳转...");
+        localStorage.setItem("access_token", result.token);
+        localStorage.setItem("user", JSON.stringify(result.user));
+
+        // 延迟跳转到导航页面
+        setTimeout(() => {
+          router.push("/navigation");
+        }, 1500);
       } else {
-        // 登录失败
-        handleError("用户名或密码错误");
-        setIsAuthenticated(false);
+        handleError("登录失败，请重试");
       }
     } catch (error) {
       console.error("登录失败:", error);
-      handleError(
-        "登录失败: " + (error instanceof Error ? error.message : "未知错误")
-      );
-      setIsAuthenticated(false);
+      const errorMessage =
+        error instanceof Error ? error.message : "未知错误";
+      handleError("登录失败: " + errorMessage);
     } finally {
       setLoginLoading(false);
     }
   };
 
+  // 注册功能
+   const handleRegister = async (
+     username: string,
+     password: string,
+     confirmPassword?: string
+   ) => {
+     console.log("handleRegister called with:", { username, password, confirmPassword });
+     try {
+       setLoginLoading(true);
+      setLoginError(null);
+ 
+       // 验证密码
+       if (!password || password.length < 6) {
+         handleError("密码长度至少为6位");
+         return;
+       }
+ 
+       if (password !== confirmPassword) {
+         handleError("两次输入的密码不一致");
+         return;
+       }
+ 
+       console.log("Calling api.register...");
+       // 调用注册接口
+       const result = await api.register(username, password);
+ 
+       console.log("Register result:", result);
+       if (result && result.user && result.token) {
+         // 注册成功
+         handleSuccess("注册成功，正在跳转...");
+         localStorage.setItem("access_token", result.token);
+         localStorage.setItem("user", JSON.stringify(result.user));
+ 
+         // 延迟跳转到导航页面
+         setTimeout(() => {
+           router.push("/navigation");
+         }, 1500);
+       } else {
+         handleError("注册失败，请重试");
+       }
+     } catch (error) {
+       console.error("注册失败:", error);
+       const errorMessage =
+         error instanceof Error ? error.message : "未知错误";
+       handleError("注册失败: " + errorMessage);
+     } finally {
+       setLoginLoading(false);
+     }
+   };
+
   return (
     <ThemeProvider theme={theme}>
-      {isAuthChecking && (
-        <Box
-          sx={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            bgcolor: "background.default",
-          }}
-        >
-          <CircularProgress size={60} thickness={4} />
-        </Box>
-      )}
       <CssBaseline />
 
       <Box
@@ -104,6 +176,7 @@ export default function Login() {
           transition: "all 0.3s ease-in-out",
           position: "absolute",
           right: 0,
+          top: 0,
         }}
       >
         <Container
@@ -138,26 +211,25 @@ export default function Login() {
         </Container>
       </Box>
 
-      {isAuthRequired &&
-        !isAuthenticated && ( // 如果需要认证但未认证，显示登录界面
-          <Box
-            sx={{
-              height: "100vh",
-              width: "100vw",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: "background.default",
-            }}
-          >
-            <LoginForm
-              onLogin={handleLogin}
-              loading={loginLoading}
-              error={loginError}
-            />
-            {snackbarNode}
-          </Box>
-        )}
+      <Box
+        sx={{
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "background.default",
+        }}
+      >
+        <LoginForm
+          mode={initialMode}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          loading={loginLoading}
+          error={loginError}
+        />
+        {snackbarNode}
+      </Box>
     </ThemeProvider>
   );
 }

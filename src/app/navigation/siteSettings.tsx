@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { DEFAULT_CONFIGS } from "@/constant/const";
+import api from "@/app/services/api";
 
 export interface SiteSettingsProps {
   handleClose?: () => void;
@@ -55,7 +56,7 @@ function SiteSettings(props: SiteSettingsProps) {
       // 保存所有配置
       for (const [key, value] of Object.entries(tempConfigs)) {
         if (configs[key] !== value) {
-          await api.setConfig(key, value);
+          await api.setConfigByKey(key, value);
         }
       }
 

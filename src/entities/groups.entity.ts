@@ -1,4 +1,3 @@
-import { SitesEntity } from "@/entities/sites.entity";
 import {
   Column,
   CreateDateColumn,
@@ -11,14 +10,16 @@ import {
 @Entity("groups")
 export class GroupsEntity {
   @PrimaryGeneratedColumn({ comment: "分组ID" })
-  @OneToMany(() => SitesEntity, (sites: SitesEntity) => sites.group_id)
   id: number;
 
   @Column({ comment: "分组名称" })
   name: string;
 
-  @Column({ comment: "分组排序" })
+  @Column({ default: 0, comment: "分组排序" })
   order_num: number;
+
+  @OneToMany("SitesEntity", "group")
+  sites: any[];
 
   @CreateDateColumn({
     type: "timestamp",

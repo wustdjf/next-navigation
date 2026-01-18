@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
+import api from "@/app/services/api";
 
 export interface ImportDataProps {
   handleClose?: () => void;
@@ -79,17 +80,13 @@ function ImportData(props: ImportDataProps) {
           // 调用API导入数据
           const result = await api.importData(importData);
 
-          if (!result.success) {
-            throw new Error(result.error || "导入失败");
-          }
-
           // 显示导入结果统计
-          const stats = result.stats;
-          if (stats) {
+          if (result && typeof result === "object") {
             const summary = [
               `导入成功！`,
-              `分组：发现${stats.groups.total}个，新建${stats.groups.created}个，合并${stats.groups.merged}个`,
-              `卡片：发现${stats.sites.total}个，新建${stats.sites.created}个，更新${stats.sites.updated}个，跳过${stats.sites.skipped}个`,
+              `分组：${result.groupsCount}个`,
+              `站点：${result.sitesCount}个`,
+              `配置：${result.configsCount}个`,
             ].join("\n");
 
             showSnackbarSuccess?.(summary);

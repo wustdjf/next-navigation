@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { successResponse, errorResponse, ErrorCode } from "@/utils/apiResponse";
+import { ensureInitialized } from "@/utils/databaseUtils";
 import groupsService from "@/services/groupsService";
 
 /**
@@ -8,6 +9,9 @@ import groupsService from "@/services/groupsService";
  */
 export async function GET(request: NextRequest) {
   try {
+    // 确保数据库已初始化
+    await ensureInitialized();
+
     // 从URL中获取查询参数
     const searchParams = request.nextUrl.searchParams;
     const {

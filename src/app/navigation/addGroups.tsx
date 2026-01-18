@@ -10,24 +10,30 @@ import {
   IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import api from "@/app/services/api";
 
 export interface IAddGroupsProps {
   handleClose?: () => void;
   addGroupsSuccess?: () => void;
   showSnackbarFail?: (message: string) => void;
+  groups?: Group[];
 }
 
 function AddGroups(props: IAddGroupsProps) {
-  const { handleClose, addGroupsSuccess, showSnackbarFail } = props;
+  const { handleClose, addGroupsSuccess, showSnackbarFail, groups = [] } = props;
 
   const [newGroup, setNewGroup] = useState<Partial<Group>>({
     name: "",
-    order_num: 0,
+    order_num: groups.length,
   });
 
   useEffect(() => {
-    //setNewGroup({ name: "", order_num: groups.length });
-  }, []);
+    // 自动计算下一个order_num
+    setNewGroup((prev) => ({
+      ...prev,
+      order_num: groups.length,
+    }));
+  }, [groups.length]);
 
   const handleGroupInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewGroup({
@@ -46,7 +52,7 @@ function AddGroups(props: IAddGroupsProps) {
       await api.createGroup(newGroup as Group);
       addGroupsSuccess?.(); // 重新加载数据
       handleClose?.();
-      setNewGroup({ name: "", order_num: 0 }); // 重置表单
+      setNewGroup({ name: "", order_num: groups.length }); // 重置表单
     } catch (error) {
       console.error("创建分组失败:", error);
       showSnackbarFail?.("创建分组失败: " + (error as Error).message);

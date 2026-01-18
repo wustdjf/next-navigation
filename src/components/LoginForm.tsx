@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  TextField,
   Button,
   Typography,
   Box,
@@ -8,16 +7,14 @@ import {
   Alert,
   Paper,
   Link,
+  TextField,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { useForm } from "react-hook-form";
-import {
-  FormContainer,
-  PasswordElement,
-  PasswordRepeatElement,
-  TextFieldElement,
-  FieldError,
-} from "react-hook-form-mui";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { useForm, Controller } from "react-hook-form";
 
 export interface UserSettings {
   username: string;
@@ -29,28 +26,58 @@ interface LoginFormProps {
   loading?: boolean;
   error?: string | null;
   onLogin?: (username: string, password: string) => void;
-  onRegister?: (username: string, password: string) => void;
+  onRegister?: (username: string, password: string, confirmPassword?: string) => void;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({
+interface LoginFormPropsWithMode extends LoginFormProps {
+  mode?: "login" | "register";
+}
+
+const LoginForm: React.FC<LoginFormPropsWithMode> = ({
   loading = false,
   error = null,
   onLogin,
   onRegister,
+  mode = "login",
 }) => {
-  const formContext = useForm<UserSettings>({
+  const { control, watch, handleSubmit, reset, formState } = useForm<UserSettings>({
     defaultValues: {
       username: "",
       password: "",
       confirmPassword: "",
     },
-    mode: "all", // 验证模式切换为all
+    mode: "onChange",
   });
 
-  const [action, setAction] = useState<"login" | "register">("login");
+  const [action, setAction] = useState<"login" | "register">(mode);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const passwordValue = watch("password");
+
+  // Sync action state with mode prop when it changes
+  useEffect(() => {
+    setAction(mode);
+    reset();
+  }, [mode, reset]);
+
+  const handleActionChange = () => {
+    const newAction = action === "login" ? "register" : "login";
+    setAction(newAction);
+    reset();
+  };
 
   const onSubmit = (data: UserSettings) => {
-    console.log(data);
+    console.log("Form submitted with data:", data);
+    console.log("Current action:", action);
+    console.log("Form errors:", formState.errors);
+
+    if (action === "login") {
+      console.log("Calling onLogin");
+      onLogin?.(data.username, data.password);
+    } else {
+      console.log("Calling onRegister");
+      onRegister?.(data.username, data.password, data.confirmPassword);
+    }
   };
 
   // const handleSubmit = (e: React.FormEvent) => {
@@ -121,34 +148,107 @@ const LoginForm: React.FC<LoginFormProps> = ({
           </Alert>
         )}
 
-        <FormContainer onSuccess={onSubmit}>
-          <TextFieldElement
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+          <Controller
             name="username"
-            label="用户名"
-            margin="normal"
-            required
-            fullWidth
-            parseError={(error: FieldError) => {
-              console.log(error);
-              return "必填";
+            control={control}
+            rules={{
+              required: "用户名为必填项",
             }}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                label="用户名"
+                margin="normal"
+                required
+                fullWidth
+                error={!!error}
+                helperText={error?.message}
+              />
+            )}
           />
-          <PasswordElement
+
+          <Controller
             name="password"
-            label="密码"
-            margin="normal"
-            required
-            fullWidth
+            control={control}
+            rules={{
+              required: "密码为必填项",
+            }}
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                label="密码"
+                type={showPassword ? "text" : "password"}
+                margin="normal"
+                required
+                fullWidth
+                error={!!error}
+                helperText={error?.message}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            )}
           />
-          <PasswordRepeatElement
-            name="confirmPassword"
-            label="确认密码"
-            passwordFieldName={"password"}
-            customInvalidFieldMessage={"确认密码和密码不同"}
-            margin="normal"
-            required
-            fullWidth
-          />
+
+          {action === "register" && (
+            <Controller
+              name="confirmPassword"
+              control={control}
+              shouldUnregister={false}
+              rules={{
+                required: "确认密码为必填项",
+                validate: (value) => {
+                  if (!value) return "确认密码为必填项";
+                  if (value !== passwordValue) return "确认密码和密码不同";
+                  return true;
+                },
+              }}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  label="确认密码"
+                  type={showConfirmPassword ? "text" : "password"}
+                  margin="normal"
+                  required
+                  fullWidth
+                  error={!!error}
+                  helperText={error?.message}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            edge="end"
+                          >
+                            {showConfirmPassword ? (
+                              <VisibilityOffIcon />
+                            ) : (
+                              <VisibilityIcon />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              )}
+            />
+          )}
 
           <Button
             type="submit"
@@ -156,6 +256,11 @@ const LoginForm: React.FC<LoginFormProps> = ({
             variant="contained"
             color="primary"
             size="large"
+            onClick={() => {
+              console.log("Button clicked!");
+              console.log("Current action:", action);
+              console.log("Form state:", formState);
+            }}
             sx={{
               py: 1.5,
               mt: 2,
@@ -174,16 +279,16 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
           <Link
             component="button"
+            type="button"
             underline="none"
-            onClick={() => {
-              setAction(() => {
-                return action === "login" ? "register" : "login";
-              });
+            onClick={(e) => {
+              e.preventDefault();
+              handleActionChange();
             }}
           >
             {`${action === "login" ? "没有账号，去注册" : "有账号，去登录"}`}
           </Link>
-        </FormContainer>
+        </Box>
       </Paper>
     </Box>
   );

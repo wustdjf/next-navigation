@@ -8,7 +8,7 @@ import {
   CreateDateColumn,
 } from "typeorm";
 import * as bcrypt from "bcryptjs";
-import { IsEmail } from "class-validator";
+import { IsEmail, IsOptional } from "class-validator";
 
 @Entity("user")
 export class User {
@@ -29,6 +29,7 @@ export class User {
   avatar: string;
 
   @Column({ default: null, comment: "邮箱" })
+  @IsOptional()
   @IsEmail()
   email: string;
 
@@ -48,8 +49,18 @@ export class User {
 
   @BeforeInsert()
   async encryptPwd() {
-    if (!this.password) return;
-    this.password = await bcrypt.hashSync(this.password, 10);
+    try {
+      if (!this.password) {
+        console.log("密码为空，跳过加密");
+        return;
+      }
+      console.log("开始加密密码...");
+      this.password = bcrypt.hashSync(this.password, 10);
+      console.log("密码加密完成");
+    } catch (error) {
+      console.error("密码加密失败:", error);
+      throw error;
+    }
   }
 
   @Column({ default: 0 })

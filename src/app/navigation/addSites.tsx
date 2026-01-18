@@ -12,15 +12,17 @@ import {
   IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import api from "@/app/services/api";
 
 export interface IAddSitesProps {
   handleClose?: () => void;
   addSitesSuccess?: () => void;
   showSnackbarFail?: (message: string) => void;
+  groupId?: number;
 }
 
 function AddSites(props: IAddSitesProps) {
-  const { handleClose, addSitesSuccess, showSnackbarFail } = props;
+  const { handleClose, addSitesSuccess, showSnackbarFail, groupId = 0 } = props;
 
   const [newSite, setNewSite] = useState<Partial<Site>>({
     name: "",
@@ -29,7 +31,7 @@ function AddSites(props: IAddSitesProps) {
     description: "",
     notes: "",
     order_num: 0,
-    group_id: 0,
+    group_id: groupId,
   });
 
   const handleSiteInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

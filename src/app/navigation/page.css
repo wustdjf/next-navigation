@@ -66,6 +66,13 @@
   }
 }
 
+/* 网站标题样式增强 */
+h1 {
+  font-weight: 900 !important;
+  letter-spacing: -0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
 /* 暗黑模式增强 */
 .dark .MuiPaper-root {
   background-color: #1e1e1e;
@@ -73,6 +80,12 @@
 
 .dark .MuiCard-root {
   background-color: #262626;
+}
+
+/* 暗黑模式下的标题增强对比度 */
+.dark h1 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* 增强可访问性 */

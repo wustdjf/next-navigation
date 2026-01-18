@@ -8,7 +8,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Card,
   CardContent,
-  CardActionArea,
   Typography,
   Skeleton,
   IconButton,
@@ -220,7 +219,18 @@ const SiteCard = memo(function SiteCard({
             </Typography>
           </Box>
         ) : (
-          <CardActionArea onClick={handleCardClick} sx={{ height: "100%" }}>
+          <Box
+            onClick={handleCardClick}
+            sx={{
+              height: "100%",
+              cursor: !isEditMode && site.url ? "pointer" : "default",
+              transition: "all 0.3s ease-in-out",
+              borderRadius: 2,
+              "&:hover": !isEditMode && site.url ? {
+                transform: "translateY(-4px)",
+              } : {},
+            }}
+          >
             <CardContent
               sx={{
                 position: "relative",
@@ -327,7 +337,7 @@ const SiteCard = memo(function SiteCard({
                   "&:hover": {
                     bgcolor: "action.selected",
                   },
-                  ".MuiCardActionArea-root:hover &": {
+                  ".MuiBox-root:hover &": {
                     opacity: 1,
                   },
                 }}
@@ -337,7 +347,7 @@ const SiteCard = memo(function SiteCard({
                 <SettingsIcon fontSize="small" />
               </IconButton>
             </CardContent>
-          </CardActionArea>
+          </Box>
         )}
       </Card>
     </Box>

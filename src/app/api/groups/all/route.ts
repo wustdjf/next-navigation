@@ -1,5 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { successResponse, errorResponse, ErrorCode } from "@/utils/apiResponse";
+import { verifyTokenFromRequest, createUnauthorizedResponse } from "@/utils/authMiddleware";
+import { ensureInitialized } from "@/utils/databaseUtils";
 import groupsService from "@/services/groupsService";
 
 /**
@@ -8,6 +10,15 @@ import groupsService from "@/services/groupsService";
  */
 export async function GET(request: NextRequest) {
   try {
+    // 验证token
+    const userId = verifyTokenFromRequest(request);
+    if (!userId) {
+      return createUnauthorizedResponse("Token无效或已过期");
+    }
+
+    // 确保数据库已初始化
+    await ensureInitialized();
+
     // 调用服务获取产品列表
     const result = await groupsService.findAllGroups();
 

@@ -1,7 +1,6 @@
 import { AppDataSource } from "@/configs/database";
 import { GroupsEntity } from "@/entities/groups.entity";
 import { Like, Repository } from "typeorm";
-import { validate } from "class-validator";
 import { ensureInitialized } from "../utils/databaseUtils";
 
 // 定义查询过滤参数接口
@@ -91,22 +90,18 @@ class GroupsService {
   // 创建分组
   async createGroup(groupData: Partial<GroupsEntity>): Promise<GroupsEntity> {
     try {
+      console.log("🔄 开始创建分组，数据:", groupData);
       const groupRepository = await this.getRepository();
+      console.log("✓ 获取分组仓库成功");
+      
       const group = groupRepository.create(groupData);
+      console.log("✓ 创建分组实例成功:", group);
 
-      // 验证分组数据
-      const errors = await validate(group);
-      if (errors.length > 0) {
-        throw new Error(
-          `验证错误: ${errors
-            .map((error) => Object.values(error.constraints || {}).join(", "))
-            .join("; ")}`
-        );
-      }
-
-      return await groupRepository.save(group);
+      const savedGroup = await groupRepository.save(group);
+      console.log("✓ 分组保存成功:", savedGroup);
+      return savedGroup;
     } catch (error) {
-      console.error("创建分组失败:", error);
+      console.error("❌ 创建分组失败:", error);
       throw error;
     }
   }
@@ -127,16 +122,6 @@ class GroupsService {
       // 合并更新数据
       Object.assign(group, groupData);
 
-      // 验证更新后的数据
-      const errors = await validate(group);
-      if (errors.length > 0) {
-        throw new Error(
-          `验证错误: ${errors
-            .map((error) => Object.values(error.constraints || {}).join(", "))
-            .join("; ")}`
-        );
-      }
-
       return await groupRepository.save(group);
     } catch (error) {
       console.error(`更新分组 ID ${id} 失败:`, error);
@@ -152,6 +137,24 @@ class GroupsService {
       return result.affected ? result.affected > 0 : false;
     } catch (error) {
       console.error(`删除分组 ID ${id} 失败:`, error);
+      throw error;
+    }
+  }
+
+  // 批量更新分组排序
+  async updateGroupOrder(
+    groupOrders: Array<{ id: number; order_num: number }>
+  ): Promise<boolean> {
+    try {
+      const groupRepository = await this.getRepository();
+
+      for (const order of groupOrders) {
+        await groupRepository.update(order.id, { order_num: order.order_num });
+      }
+
+      return true;
+    } catch (error) {
+      console.error("批量更新分组排序失败:", error);
       throw error;
     }
   }

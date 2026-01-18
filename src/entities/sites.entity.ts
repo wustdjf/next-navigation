@@ -1,4 +1,3 @@
-import { GroupsEntity } from "@/entities/groups.entity";
 import {
   Column,
   CreateDateColumn,
@@ -14,11 +13,14 @@ export class SitesEntity {
   @PrimaryGeneratedColumn({ comment: "站点ID" })
   id: number;
 
-  @ManyToOne(() => GroupsEntity, (groups: GroupsEntity) => groups.id, {
+  @Column({ comment: "分组ID" })
+  group_id: number;
+
+  @ManyToOne("GroupsEntity", "sites", {
     onDelete: "CASCADE",
   })
   @JoinColumn({ name: "group_id" })
-  group_id: number;
+  group: any;
 
   @Column({ comment: "站点名称" })
   name: string;

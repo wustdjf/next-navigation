@@ -55,7 +55,7 @@ export async function createGroup(data: Omit<Group, "id">) {
     const response = await axios.post("/api/groups/create", data);
     return response.data;
   } catch (error) {
-    console.error("创建产品失败:", error);
+    console.error("创建分组失败:", error);
     throw error;
   }
 }

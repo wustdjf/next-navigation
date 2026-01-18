@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { Site } from "@/types/sites";
 import type { Group } from "@/types/groups";
 import type { GroupWithSites } from "@/types/type";
 import ThemeToggle from "@/components/ThemeToggle";
 import GroupCard from "@/components/GroupCard";
+import UserAuthHeader from "@/components/UserAuthHeader";
 import "./page.css";
 import {
   DndContext,
@@ -61,13 +63,20 @@ import AddSites from "./addSites";
 import AddGroups from "./addGroups";
 import { SortMode, DEFAULT_CONFIGS } from "@/constant/const";
 import { useTheme } from "@/hooks/useTheme";
+import api from "@/app/services/api";
 
-const appNotificationHandler = new AppNotificationHandler();
-appNotificationHandler.requestPermission();
+let appNotificationHandler: AppNotificationHandler | null = null;
 
-const api = "http://localhost:8085/api";
+function getNotificationHandler() {
+  if (typeof window !== "undefined" && !appNotificationHandler) {
+    appNotificationHandler = new AppNotificationHandler();
+    appNotificationHandler.requestPermission();
+  }
+  return appNotificationHandler;
+}
 
 function App() {
+  const router = useRouter();
   const { openDialog, closeDialog, dialogNode } = useDialog({
     maxWidth: "sm",
     fullWidth: true,
@@ -89,7 +98,8 @@ function App() {
   const { darkMode, theme, themeNode } = useTheme();
 
   const [groups, setGroups] = useState<GroupWithSites[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>(SortMode.None);
   const [currentSortingGroupId, setCurrentSortingGroupId] = useState<
     number | null
@@ -98,6 +108,18 @@ function App() {
   // 配置状态
   const [configs, setConfigs] =
     useState<Record<string, string>>(DEFAULT_CONFIGS);
+
+  // 认证检查
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      console.log("🔐 未检测到token，重定向到首页");
+      router.push("/");
+    } else {
+      // 在后台加载数据，不阻塞UI
+      fetchData(true);
+    }
+  }, [router]);
 
   // 配置传感器，支持鼠标、触摸和键盘操作
   const sensors = useSensors(
@@ -180,15 +202,14 @@ function App() {
   // 登出功能
   const handleLogout = () => {
     api.logout();
-    setIsAuthenticated(false);
-    setIsAuthRequired(true);
-
-    // 清空数据
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
     setGroups([]);
     handleMenuClose();
-
-    // 显示提示信息
-    setError("已退出登录，请重新登录");
+    handleError("已退出登录，正在跳转...");
+    setTimeout(() => {
+      router.push("/");
+    }, 1500);
   };
 
   // 加载配置
@@ -264,9 +285,11 @@ function App() {
     }
   }, [darkMode]);
 
-  const fetchData = async () => {
+  const fetchData = async (isInitial: boolean = false) => {
     try {
-      setLoading(true);
+      if (!isInitial) {
+        setLoading(true);
+      }
       const groupsData = await api.getGroups();
 
       // 获取每个分组的站点并确保id存在
@@ -274,7 +297,7 @@ function App() {
         groupsData
           .filter((group) => group.id !== undefined) // 过滤掉没有id的分组
           .map(async (group) => {
-            const sites = await api.getSites(group.id);
+            const sites = await api.getSites(group.id as number);
             return {
               ...group,
               id: group.id as number, // 确保id不为undefined
@@ -284,6 +307,9 @@ function App() {
       );
 
       setGroups(groupsWithSites);
+      if (isInitial) {
+        setIsInitialLoad(false);
+      }
     } catch (error) {
       console.error("加载数据失败:", error);
       handleError(
@@ -335,15 +361,11 @@ function App() {
       }));
 
       // 调用API更新分组顺序
-      const result = await api.updateGroupOrder(groupOrders);
+      await api.updateGroupOrder(groupOrders);
 
-      if (result) {
-        console.log("分组排序更新成功");
-        // 重新获取最新数据
-        await fetchData();
-      } else {
-        throw new Error("分组排序更新失败");
-      }
+      console.log("分组排序更新成功");
+      // 重新获取最新数据
+      await fetchData();
 
       setSortMode(SortMode.None);
       setCurrentSortingGroupId(null);
@@ -365,15 +387,11 @@ function App() {
       }));
 
       // 调用API更新站点顺序
-      const result = await api.updateSiteOrder(siteOrders);
+      await api.updateSiteOrder(siteOrders);
 
-      if (result) {
-        console.log("站点排序更新成功");
-        // 重新获取最新数据
-        await fetchData();
-      } else {
-        throw new Error("站点排序更新失败");
-      }
+      console.log("站点排序更新成功");
+      // 重新获取最新数据
+      await fetchData();
 
       setSortMode(SortMode.None);
       setCurrentSortingGroupId(null);
@@ -435,6 +453,7 @@ function App() {
           showSnackbarFail={(message: string) => {
             handleError(message);
           }}
+          groups={groups}
         />
       ),
     });
@@ -452,6 +471,7 @@ function App() {
           showSnackbarFail={(message: string) => {
             handleError(message);
           }}
+          groupId={groupId}
         />
       ),
     });
@@ -618,90 +638,109 @@ function App() {
             <Typography
               variant="h3"
               component="h1"
-              fontWeight="bold"
-              color="text.primary"
+              fontWeight="900"
               sx={{
                 fontSize: { xs: "1.75rem", sm: "2.125rem", md: "3rem" },
                 textAlign: { xs: "center", sm: "left" },
+                color: "text.primary",
+                textShadow: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "0 2px 4px rgba(0, 0, 0, 0.3)"
+                    : "0 1px 2px rgba(0, 0, 0, 0.1)",
+                letterSpacing: "-0.5px",
               }}
             >
               {configs["site.name"]}
             </Typography>
-            <Stack
-              direction={{ xs: "row", sm: "row" }}
-              spacing={{ xs: 1, sm: 2 }}
-              alignItems="center"
-              width={{ xs: "100%", sm: "auto" }}
-              justifyContent={{ xs: "center", sm: "flex-end" }}
-              flexWrap="wrap"
-              sx={{ gap: { xs: 1, sm: 2 }, py: { xs: 1, sm: 0 } }}
+            
+            {/* 右侧容器 - 确保主题切换按钮永远在最右边 */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                width: { xs: "100%", sm: "auto" },
+                gap: { xs: 1, sm: 2 },
+              }}
             >
-              {sortMode !== SortMode.None ? (
-                <>
-                  {sortMode === SortMode.GroupSort && (
+              {/* 中间按钮容器 */}
+              <Stack
+                direction={{ xs: "row", sm: "row" }}
+                spacing={{ xs: 1, sm: 2 }}
+                alignItems="center"
+                sx={{ 
+                  flex: 1,
+                  justifyContent: { xs: "center", sm: "flex-end" },
+                  flexWrap: "wrap",
+                  gap: { xs: 1, sm: 2 },
+                }}
+              >
+                {sortMode !== SortMode.None ? (
+                  <>
+                    {sortMode === SortMode.GroupSort && (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<SaveIcon />}
+                        onClick={handleSaveGroupOrder}
+                        size="small"
+                        sx={{
+                          minWidth: "auto",
+                          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        }}
+                      >
+                        保存分组顺序
+                      </Button>
+                    )}
                     <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<SaveIcon />}
-                      onClick={handleSaveGroupOrder}
+                      variant="outlined"
+                      color="inherit"
+                      startIcon={<CancelIcon />}
+                      onClick={cancelSort}
                       size="small"
                       sx={{
                         minWidth: "auto",
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                       }}
                     >
-                      保存分组顺序
+                      取消编辑
                     </Button>
-                  )}
-                  <Button
-                    variant="outlined"
-                    color="inherit"
-                    startIcon={<CancelIcon />}
-                    onClick={cancelSort}
-                    size="small"
-                    sx={{
-                      minWidth: "auto",
-                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                    }}
-                  >
-                    取消编辑
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={handleOpenAddGroup}
-                    size="small"
-                    sx={{
-                      minWidth: "auto",
-                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                    }}
-                  >
-                    新增分组
-                  </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<AddIcon />}
+                      onClick={handleOpenAddGroup}
+                      size="small"
+                      sx={{
+                        minWidth: "auto",
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                      }}
+                    >
+                      新增分组
+                    </Button>
 
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<MenuIcon />}
-                    onClick={handleMenuOpen}
-                    aria-controls={openMenu ? "navigation-menu" : undefined}
-                    aria-haspopup="true"
-                    aria-expanded={openMenu ? "true" : undefined}
-                    size="small"
-                    sx={{
-                      minWidth: "auto",
-                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                    }}
-                  >
-                    更多选项
-                  </Button>
-                  <Menu
-                    id="navigation-menu"
-                    anchorEl={menuAnchorEl}
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<MenuIcon />}
+                      onClick={handleMenuOpen}
+                      aria-controls={openMenu ? "navigation-menu" : undefined}
+                      aria-haspopup="true"
+                      aria-expanded={openMenu ? "true" : undefined}
+                      size="small"
+                      sx={{
+                        minWidth: "auto",
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                      }}
+                    >
+                      更多选项
+                    </Button>
+                    <Menu
+                      id="navigation-menu"
+                      anchorEl={menuAnchorEl}
                     open={openMenu}
                     onClose={handleMenuClose}
                     MenuListProps={{
@@ -750,8 +789,24 @@ function App() {
                   </Menu>
                 </>
               )}
-              {themeNode}
+              
+              {/* 用户信息显示 */}
+              <UserAuthHeader 
+                onLogout={() => {
+                  setGroups([]);
+                  handleError("已退出登录，正在跳转...");
+                  setTimeout(() => {
+                    router.push("/");
+                  }, 1500);
+                }}
+              />
+
+             
             </Stack>
+
+            {/* 主题切换按钮 - 永远在最右边 */}
+            {themeNode}
+            </Box>
           </Box>
 
           {loading && (
@@ -767,14 +822,34 @@ function App() {
             </Box>
           )}
 
-          {!loading && !error && (
+          {!isInitialLoad && (
             <Box
               sx={{
                 "& > *": { mb: 5 },
                 minHeight: "100px",
               }}
             >
-              {sortMode === SortMode.GroupSort ? (
+              {groups.length === 0 ? (
+                <Box
+                  sx={{
+                    textAlign: "center",
+                    py: 8,
+                    color: "text.secondary",
+                  }}
+                >
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    还没有分组，点击"新增分组"开始创建
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleOpenAddGroup}
+                  >
+                    新增分组
+                  </Button>
+                </Box>
+              ) : sortMode === SortMode.GroupSort ? (
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
