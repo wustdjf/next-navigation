@@ -11,7 +11,7 @@ export class ConfigsEntity {
   @PrimaryColumn({ type: "varchar", comment: "配置key" })
   key: string;
 
-  @Column({ comment: "配置value" })
+  @Column({ type: "varchar", comment: "配置value" })
   value: string;
 
   @CreateDateColumn({

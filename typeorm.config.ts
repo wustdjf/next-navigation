@@ -3,12 +3,16 @@ import { DataSource } from "typeorm";
 import * as path from "path";
 import * as dotenv from "dotenv";
 import { fileURLToPath } from 'url';
+import { User } from "./src/entities/user.entity";
+import { GroupsEntity } from "./src/entities/groups.entity";
+import { SitesEntity } from "./src/entities/sites.entity";
+import { ConfigsEntity } from "./src/entities/configs.entity";
 
 // 加载环境变量
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
-
+const __dirname = path.dirname(__filename);
 
 // 创建数据源
 export const AppDataSource = new DataSource({
@@ -18,10 +22,13 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || "root",
   password: process.env.DB_PASSWD || "password",
   database: process.env.DB_DATABASE || "navigationDB",
-  entities: [path.join(path.dirname(__filename), "src/entities/**/*.entity.{ts,js}")],
-  migrations: [path.join(path.dirname(__filename), "src/migrations/**/*.{ts,js}")],
+  entities: [User, GroupsEntity, SitesEntity, ConfigsEntity],
+  migrations: [path.join(__dirname, "src/migrations/**/*.ts")],
   migrationsTableName: "migrations",
-  logging: true,
-  synchronize: false // 迁移时禁用同步
+  logging: false,
+  synchronize: false,
+  cli: {
+    migrationsDir: "src/migrations"
+  }
 });
 

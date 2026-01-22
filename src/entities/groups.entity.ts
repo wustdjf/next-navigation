@@ -12,10 +12,10 @@ export class GroupsEntity {
   @PrimaryGeneratedColumn({ comment: "分组ID" })
   id: number;
 
-  @Column({ comment: "分组名称" })
+  @Column({ type: "varchar", comment: "分组名称" })
   name: string;
 
-  @Column({ default: 0, comment: "分组排序" })
+  @Column({ type: "int", default: 0, comment: "分组排序" })
   order_num: number;
 
   @OneToMany("SitesEntity", "group")

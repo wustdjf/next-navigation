@@ -15,20 +15,20 @@ export class User {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ unique: true, comment: "用户名" })
+  @Column({ type: "varchar", unique: true, comment: "用户名" })
   username: string;
 
-  @Column({ default: null, comment: "用户昵称" })
+  @Column({ type: "varchar", default: null, nullable: true, comment: "用户昵称" })
   nickname: string;
 
   @Exclude()
-  @Column({ select: false, comment: "密码" })
+  @Column({ type: "varchar", select: false, comment: "密码" })
   password: string;
 
-  @Column({ default: null, comment: "图像" })
+  @Column({ type: "varchar", default: null, nullable: true, comment: "图像" })
   avatar: string;
 
-  @Column({ default: null, comment: "邮箱" })
+  @Column({ type: "varchar", default: null, nullable: true, comment: "邮箱" })
   @IsOptional()
   @IsEmail()
   email: string;
@@ -63,6 +63,6 @@ export class User {
     }
   }
 
-  @Column({ default: 0 })
+  @Column({ type: "int", default: 0 })
   tokenVersion: number; // 新增token版本号
 }

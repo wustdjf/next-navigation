@@ -13,7 +13,7 @@ export class SitesEntity {
   @PrimaryGeneratedColumn({ comment: "站点ID" })
   id: number;
 
-  @Column({ comment: "分组ID" })
+  @Column({ type: "int", comment: "分组ID" })
   group_id: number;
 
   @ManyToOne("GroupsEntity", "sites", {
@@ -22,22 +22,22 @@ export class SitesEntity {
   @JoinColumn({ name: "group_id" })
   group: any;
 
-  @Column({ comment: "站点名称" })
+  @Column({ type: "varchar", comment: "站点名称" })
   name: string;
 
-  @Column({ comment: "站点url" })
+  @Column({ type: "varchar", comment: "站点url" })
   url: string;
 
-  @Column({ nullable: true, comment: "站点图标" })
+  @Column({ type: "varchar", nullable: true, comment: "站点图标" })
   icon: string;
 
-  @Column({ nullable: true, comment: "站点简介" })
+  @Column({ type: "varchar", nullable: true, comment: "站点简介" })
   description: string;
 
-  @Column({ nullable: true, comment: "站点描述" })
+  @Column({ type: "varchar", nullable: true, comment: "站点描述" })
   notes: string;
 
-  @Column({ comment: "站点排序" })
+  @Column({ type: "int", comment: "站点排序" })
   order_num: number;
 
   @CreateDateColumn({
